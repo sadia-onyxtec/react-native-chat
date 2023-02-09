@@ -95,6 +95,8 @@ function LoginScreen({ navigation }) {
 
     }
     async function saveUser(new_register, all_conversation_of_new_user) {
+
+        //creating the auth user in database
         await addDoc(collection(db, 'users'), {
             username: new_register.user.email.replace(/@.*$/, ""),
             email: new_register.user.email,
@@ -102,9 +104,20 @@ function LoginScreen({ navigation }) {
             conversation: all_conversation_of_new_user
         })
             .then(() => {
+                createMessages(all_conversation_of_new_user)
                 // navigation.navigate("Home", { name: new_register.user.email.replace(/@.*$/, "") })
             })
             .catch((err) => console.log(err))
+    }
+
+    async function createMessages(conversations) {
+        var message_doc_ref;
+
+        //creating messages sub-collection in message collection against conversation ids
+        conversations.forEach(async conversation => {
+            message_doc_ref = collection(db, 'message', conversation, 'messages');
+            await addDoc(message_doc_ref, {}, { merge: true });
+        });
     }
     return (
         <SafeAreaView style={styles.container}>
