@@ -85,8 +85,8 @@ function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {/* {user ? <ChatStack /> : <AuthStack />} */}
-      <AuthStack />
+      {user ? <ChatStack /> : <AuthStack />}
+      {/* <AuthStack /> */}
     </NavigationContainer>
   );
 }

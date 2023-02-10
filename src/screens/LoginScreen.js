@@ -95,24 +95,23 @@ function LoginScreen({ navigation }) {
 
     }
     async function saveUser(new_register, all_conversation_of_new_user) {
-
         //creating the auth user in database
-        await addDoc(collection(db, 'users'), {
+        await setDoc(doc(db, 'users', new_register.user.uid), {
             username: new_register.user.email.replace(/@.*$/, ""),
             email: new_register.user.email,
             uid: new_register.user.uid,
             conversation: all_conversation_of_new_user
         })
             .then(() => {
-                createMessages(all_conversation_of_new_user)
-                // navigation.navigate("Home", { name: new_register.user.email.replace(/@.*$/, "") })
+                createMessages(all_conversation_of_new_user).then(() => {
+                    navigation.navigate("Home", { name: new_register.user.email.replace(/@.*$/, ""), conversations: all_conversation_of_new_user })
+                }).catch((err) => console.log(err))
             })
             .catch((err) => console.log(err))
     }
 
     async function createMessages(conversations) {
         var message_doc_ref;
-
         //creating messages sub-collection in message collection against conversation ids
         conversations.forEach(async conversation => {
             message_doc_ref = collection(db, 'message', conversation, 'messages');
