@@ -45,11 +45,11 @@ function LoginScreen({ navigation }) {
         //and saving that conversation id in all user docs and in conversation docs
         await userSnap.forEach(async (userDoc, index) => {
             _conversations = [];
-            // getting collection reference
-            conversation_ref = collection(db, 'conversation')
+            // getting doc reference of conversation collection
+            conversation_ref = doc(collection(db, "conversation"));
 
             //creating a new doc in conversation using the above reference.
-            new_conversation = await addDoc(conversation_ref, {
+            new_conversation = await setDoc(conversation_ref, {
                 created_at: Timestamp.fromDate(new Date()),
                 created_by: new_user.user.uid,
                 first_participant: new_user.user.uid,
@@ -58,7 +58,8 @@ function LoginScreen({ navigation }) {
                     sent_by: null,
                     sent_at: null,
                     message_text: null
-                }
+                },
+                id: conversation_ref.id
             },)
 
             //pushing this new conversation id in the user's conversation array so that
@@ -66,20 +67,13 @@ function LoginScreen({ navigation }) {
             if (userDoc.data().conversation.length > 0) {
                 _conversations = userDoc.data().conversation;
             }
-            _conversations.push(new_conversation.id)
+            _conversations.push(conversation_ref.id)
 
             //saving all conversation ids in another array to push it in the new user doc
-            all_conversation_of_new_user.push(new_conversation.id)
+            all_conversation_of_new_user.push(conversation_ref.id)
 
             //this query will update the conversation array in user doc on the current index
             await updateDoc(userDoc.ref, { conversation: _conversations });
-
-            //creating a new conversation ref by passing the same id from which the above co-
-            //-nversation was created
-            conversation_ref_for_id = doc(db, 'conversation', new_conversation.id);
-
-            //saving the conversation id in that conversation doc to which it's pointing to
-            await updateDoc(conversation_ref_for_id, { id: new_conversation.id });
 
             // calling save user here because it was being called before the loop was finished
             users_processed++;
