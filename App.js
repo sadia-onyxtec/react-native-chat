@@ -7,6 +7,7 @@ import { auth } from "./config/firebase";
 import HomeScreen from './src/screens/HomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import ChatScreen from './src/screens/ChatScreen';
+import SignUpScreen from './src/screens/SignUpScreen';
 
 
 const Stack = createStackNavigator();
@@ -55,7 +56,7 @@ function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name='Login' component={LoginScreen} />
-
+      <Stack.Screen name='SignUp' component={SignUpScreen} />
     </Stack.Navigator>
   );
 }
@@ -86,7 +87,6 @@ function RootNavigator() {
   return (
     <NavigationContainer>
       {user ? <ChatStack /> : <AuthStack />}
-      {/* <AuthStack /> */}
     </NavigationContainer>
   );
 }
