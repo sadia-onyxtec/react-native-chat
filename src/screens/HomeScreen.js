@@ -147,7 +147,6 @@ function HomeScreen({ navigation, route }) {
             snapshot => {
                 getConversations().then(() => {
                     setIsLoading(false);
-                    console.log(conversationList?.length, auth?.currentUser.email)
                 }).catch((err) => console.log(err))
             })
         return unsubscribe;
@@ -157,7 +156,6 @@ function HomeScreen({ navigation, route }) {
             snapshot => {
                 getConversations().then(() => {
                     setIsLoading(false);
-                    console.log(conversationList?.length, auth?.currentUser.email)
                 })
             })
         return unsubscribe;

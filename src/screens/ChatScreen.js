@@ -119,11 +119,31 @@ const ChatScreen = ({ route, navigation }) => {
     //Bubble design if reply message exists
     props.currentMessage &&
     props.currentMessage.replyMessage && (
-      <View style={styles.replyMessageContainer}>
-        <Text>{props.currentMessage.replyMessage.text}</Text>
-        <View style={styles.replyMessageDivider} />
+      <View style={styles.replyOuterContainer}>
+        <View style={styles.replyMessageContainer}>
+          <Text style={styles.replyText}>{props.currentMessage.replyMessage.text}</Text>
+        </View>
       </View>
     )
+
+  const renderBubble = (props) =>
+    <Bubble
+      {...props}
+      textStyle={{
+        right: {
+          color: '#F8F4EA',
+        },
+      }}
+      wrapperStyle={{
+        right: {
+          backgroundColor: '#393E46',
+        },
+        left: {
+          backgroundColor: '#fff',
+        },
+      }}
+    />
+
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -141,6 +161,7 @@ const ChatScreen = ({ route, navigation }) => {
         messagesContainerStyle={styles.messagesContainer}
         renderMessage={renderMessageBox}
         renderCustomView={renderReplyMessageView}
+        renderBubble={renderBubble}
       />
     </SafeAreaView>
   )
@@ -158,13 +179,18 @@ const styles = StyleSheet.create({
     flex: 1
   },
   replyMessageContainer: {
-    padding: 8,
-    paddingBottom: 0
+    flexDirection: "row",
+    paddingRight: 8,
+    borderRadius: 8,
+    backgroundColor: "#8c95a9",
   },
-  replyMessageDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: "lightgrey",
-    paddingTop: 6
+  replyOuterContainer: {
+    marginHorizontal: 10,
+    marginTop: 10,
+  },
+  replyText: {
+    color: "#1d2020",
+    padding: 8
   }
 })
 
