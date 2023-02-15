@@ -41,6 +41,11 @@ function LoginScreen({ navigation }) {
             <TouchableOpacity style={styles.loginBtn} onPress={_continue}>
                 <Text style={styles.loginText}>LOGIN</Text>
             </TouchableOpacity>
+
+            <View style={{ justifyContent: "flex-end", top: "2%" }}>
+                <Text style={styles.loginText}>Don't have an account?
+                    <Text style={styles.signupText} onPress={() => navigation.navigate("SignUp")}> Sign Up</Text></Text>
+            </View>
         </SafeAreaView>
     );
 }
@@ -97,7 +102,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginTop: 40,
         backgroundColor: "#88c0d0",
-    },
+    }, signupText: {
+        alignSelf: "center",
+        fontWeight: "500",
+        color: "#657b86",
+    }
 
 });
 

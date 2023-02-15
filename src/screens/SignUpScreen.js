@@ -29,7 +29,6 @@ function SignUpScreen({ navigation }) {
     }
     async function createConversation(new_user) {
         //initializing some variables that would be needed in the below loop
-        var conversation_ref;
         var new_conversation;
         var _conversations = new Array;
         const user_ref = collection(db, 'users');
@@ -42,13 +41,13 @@ function SignUpScreen({ navigation }) {
         //getting the count of all docs in user collection
         var count = await getCountFromServer(user_ref);
         count = count.data().count;
-
         //looping on user docs to create conversation of each user with new;y created user
         //and saving that conversation id in all user docs and in conversation docs
         await userSnap.forEach(async (userDoc, index) => {
             _conversations = [];
-            // getting doc reference of conversation collection
-            conversation_ref = doc(collection(db, "conversation"));
+
+            // getting doc reference
+            const conversation_ref = doc(collection(db, "conversation"));
 
             //creating a new doc in conversation using the above reference.
             new_conversation = await setDoc(conversation_ref, {
@@ -62,28 +61,36 @@ function SignUpScreen({ navigation }) {
                     message_text: null
                 },
                 id: conversation_ref.id
-            },)
+            })
+                .then(async () => {
+                    //pushing this new conversation id in the user's conversation array so that
+                    //we will have the conversation ref id in the user doc too.
+                    if (userDoc.data().conversation.length > 0) {
+                        _conversations = userDoc.data().conversation;
+                    }
+                    _conversations.push(conversation_ref.id)
 
-            //pushing this new conversation id in the user's conversation array so that
-            //we will have the conversation ref id in the user doc too.
-            if (userDoc.data().conversation.length > 0) {
-                _conversations = userDoc.data().conversation;
-            }
-            _conversations.push(conversation_ref.id)
+                    //saving all conversation ids in another array to push it in the new user doc
+                    all_conversation_of_new_user.push(conversation_ref.id)
 
-            //saving all conversation ids in another array to push it in the new user doc
-            all_conversation_of_new_user.push(conversation_ref.id)
+                    //this query will update the conversation array in user doc on the current index
+                    await updateDoc(userDoc.ref, { conversation: _conversations })
+                        .then(async () => {
 
-            //this query will update the conversation array in user doc on the current index
-            await updateDoc(userDoc.ref, { conversation: _conversations });
-
-            // calling save user here because it was being called before the loop was finished
-            users_processed++;
-            if (users_processed === count) {
-                await saveUser(new_user, all_conversation_of_new_user)
-            }
+                            // calling save user here because it was being called before the loop was finished
+                            users_processed++;
+                            if (users_processed === count) {
+                                await saveUser(new_user, all_conversation_of_new_user)
+                            }
+                        })
+                        .catch((err) => {
+                            console.log("2", err)
+                        })
+                })
+                .catch((err) => {
+                    console.log("3", err)
+                })
         })
-
         //if count is zero above loop will not work so creating user here if it's the first user
         if (count === 0) {
             await saveUser(new_user, all_conversation_of_new_user)

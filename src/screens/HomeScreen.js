@@ -50,59 +50,88 @@ function HomeScreen({ navigation, route }) {
                 //getting docs of second participant reference
                 await getDocs(conversation_doc_query_2)
                     .then(async (conversation_docs_2) => {
+                        if (count_of_first_participants_list.length !== 0) {
 
-                        //looping on first participant list
-                        conversation_docs_1?.forEach(async conversation_1 => {
-                            const conversation_obj = {}
+                            //looping on first participant list
+                            conversation_docs_1?.forEach(async conversation_1 => {
+                                const conversation_obj = {}
 
-                            //getting second participant -users in those conversations where auth user was first participant
-                            const user_ref = doc(db, "users", conversation_1.data().second_participant);
-                            await getDoc(user_ref).then((user_doc_for_second_participants) => {
+                                //getting second participant -users in those conversations where auth user was first participant
+                                const user_ref = doc(db, "users", conversation_1.data().second_participant);
+                                await getDoc(user_ref).then((user_doc_for_second_participants) => {
 
-                                //setting data in useState variable
-                                conversation_obj['sender'] = user_doc_for_second_participants.data();
-                                conversation_obj['conversation'] = conversation_1.data();
-                                conversation_list.push(conversation_obj);
+                                    //setting data in useState variable
+                                    conversation_obj['sender'] = user_doc_for_second_participants.data();
+                                    conversation_obj['conversation'] = conversation_1.data();
+                                    conversation_list.push(conversation_obj);
 
-                                //checking if we have reached the end of the loop
-                                if (conversation_list.length === count_of_first_participants_list) {
+                                    //checking if we have reached the end of the loop
+                                    if (conversation_list.length === count_of_first_participants_list) {
 
-                                    //checking if the second participant reference doc is empty or not
-                                    if (count_of_second_participants_list !== 0) {
+                                        //checking if the second participant reference doc is empty or not
+                                        if (count_of_second_participants_list !== 0) {
 
-                                        //looping on the second participant reference doc if it's not empty
-                                        conversation_docs_2?.forEach(async conversation_2 => {
-                                            const conversation_obj_2 = {}
+                                            //looping on the second participant reference doc if it's not empty
+                                            conversation_docs_2?.forEach(async conversation_2 => {
+                                                const conversation_obj_2 = {}
 
-                                            //getting first participant -users in those conversations where auth user was second participant
-                                            const user_ref_2 = doc(db, "users", conversation_2.data().first_participant);
-                                            await getDoc(user_ref_2)
-                                                .then((user_doc_for_first_participants) => {
+                                                //getting first participant -users in those conversations where auth user was second participant
+                                                const user_ref_2 = doc(db, "users", conversation_2.data().first_participant);
+                                                await getDoc(user_ref_2)
+                                                    .then((user_doc_for_first_participants) => {
 
-                                                    //setting data in useState variable
-                                                    conversation_obj_2['sender'] = user_doc_for_first_participants.data();
-                                                    conversation_obj_2['conversation'] = conversation_2.data();
-                                                    conversation_list.push(conversation_obj_2);
+                                                        //setting data in useState variable
+                                                        conversation_obj_2['sender'] = user_doc_for_first_participants.data();
+                                                        conversation_obj_2['conversation'] = conversation_2.data();
+                                                        conversation_list.push(conversation_obj_2);
 
-                                                    //checking if we have reached the end of the loop
-                                                    if (conversation_list.length === count_of_second_participants_list) {
-                                                        setConversationList(conversation_list);
-                                                    }
-                                                })
-                                                .catch((error) => {
-                                                    console.log(error)
-                                                })
-                                        })
+                                                        //checking if we have reached the end of the loop
+                                                        if (conversation_list.length === count_of_second_participants_list + count_of_first_participants_list) {
+                                                            setConversationList(conversation_list);
+                                                        }
+                                                    })
+                                                    .catch((error) => {
+                                                        console.log(error)
+                                                    })
+                                            })
+                                        }
+                                        else {
+                                            //setting data whatever we have for first participants if second participant reference doc is empty
+                                            setConversationList(conversation_list);
+                                        }
                                     }
-                                    else {
-                                        //setting data whatever we have for first participants if second participant reference doc is empty
-                                        setConversationList(conversation_list);
-                                    }
-                                }
-                            }).catch((err) => {
-                                console.log(err)
+                                }).catch((err) => {
+                                    console.log(err)
+                                })
+                            });
+                        } else if (count_of_second_participants_list !== 0) {
+                            //looping on the second participant reference doc if it's not empty
+                            conversation_docs_2?.forEach(async conversation_2 => {
+                                const conversation_obj_2 = {}
+
+                                //getting first participant -users in those conversations where auth user was second participant
+                                const user_ref_2 = doc(db, "users", conversation_2.data().first_participant);
+                                await getDoc(user_ref_2)
+                                    .then((user_doc_for_first_participants) => {
+
+                                        //setting data in useState variable
+                                        conversation_obj_2['sender'] = user_doc_for_first_participants.data();
+                                        conversation_obj_2['conversation'] = conversation_2.data();
+                                        conversation_list.push(conversation_obj_2);
+
+                                        //checking if we have reached the end of the loop
+                                        if (conversation_list.length === count_of_second_participants_list) {
+                                            setConversationList(conversation_list);
+                                        }
+                                    })
+                                    .catch((error) => {
+                                        console.log(error)
+                                    })
                             })
-                        });
+                        }
+                        else {
+                            setConversationList([]);
+                        }
                     })
                     .catch((error) => {
                         console.log(error)
@@ -113,10 +142,23 @@ function HomeScreen({ navigation, route }) {
             })
 
     }
-    useEffect(() => {
+    useLayoutEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'users'),
             snapshot => {
-                getConversations();
+                getConversations().then(() => {
+                    setIsLoading(false);
+                    console.log(conversationList?.length, auth?.currentUser.email)
+                }).catch((err) => console.log(err))
+            })
+        return unsubscribe;
+    }, []);
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'conversation'),
+            snapshot => {
+                getConversations().then(() => {
+                    setIsLoading(false);
+                    console.log(conversationList?.length, auth?.currentUser.email)
+                })
             })
         return unsubscribe;
     }, []);
