@@ -1,18 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react"
-import { StyleSheet, View, Text, ActivityIndicator, SafeAreaView } from "react-native"
+import { StyleSheet, View, Text, ActivityIndicator, SafeAreaView, ActionSheetIOS, TouchableOpacity } from "react-native"
 import { GiftedChat, InputToolbar, Bubble } from "react-native-gifted-chat"
-
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker'
 import ChatMessageBox from "./components/ChatMessageBox"
 import ReplyMessageBar from "./components/ReplyMessageBar"
-import {
-  collection,
-  orderBy,
-  query,
-  onSnapshot,
-  doc,
-  setDoc
-} from 'firebase/firestore';
-import { auth, db } from '../../config/firebase';
+import { collection, orderBy, query, onSnapshot, doc, setDoc, } from 'firebase/firestore';
+import { auth, db, app } from '../../config/firebase';
+import uuid from 'react-native-uuid';
+import { uploadBytes, ref, getDownloadURL, getStorage } from "@firebase/storage"
+
 const ChatScreen = ({ route, navigation }) => {
   const [replyMessage, setReplyMessage] = useState(null);
   //using ref for swiping a message because user can only 
@@ -26,6 +22,13 @@ const ChatScreen = ({ route, navigation }) => {
 
   useLayoutEffect(() => {
     setIsLoading(true)
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity style={{ marginRight: 10 }} onPress={gotoMedia}>
+          <Text>Media</Text>
+        </TouchableOpacity>
+      )
+    })
     const collectionRef = collection(db, 'message', conversation.id, "messages");
     const queryRef = query(collectionRef, orderBy('sent_at', 'desc'));
     var obj = {};
@@ -36,7 +39,7 @@ const ChatScreen = ({ route, navigation }) => {
         user: doc.data().sent_by,
         text: doc.data().message_text,
         replyMessage: doc.data().replyMessage ? doc.data().replyMessage : null,
-        // image: doc.data().image,
+        image: doc.data().image,
         // video: doc.data().video
       }))
     ));
@@ -46,6 +49,102 @@ const ChatScreen = ({ route, navigation }) => {
       setIsLoading(false);
     };
   }, []);
+
+
+  const gotoMedia = () => {
+    ActionSheetIOS.showActionSheetWithOptions({
+      options: ["Cancel", "Camera", "Photos", "Video"],
+      cancelButtonIndex: 0
+    },
+      buttonIndex => {
+        if (buttonIndex == 2) {
+          launchImageLibrary().then((res) => {
+            if (!res.didCancel && !res.errorCode) {
+              uploadMediaToFirestore(res, 'image');
+            }
+          });
+        } else if (buttonIndex == 1) {
+          launchCamera().then((res) => {
+            if (!res.didCancel && !res.errorCode) {
+              //uploadMediaToFirestore(res, 'image');
+            }
+          });
+        } else if (buttonIndex == 3) {
+          const options = {
+            title: 'Video Picker',
+            mediaType: 'video',
+          };
+          launchImageLibrary(options).then((res) => {
+            if (!res.didCancel && !res.errorCode) {
+              //uploadMediaToFirestore(res, 'video');
+            }
+          });
+        }
+      })
+  }
+
+  const uploadMediaToFirestore = async (res, type) => {
+    const uri = res.assets[0].uri;
+    console.log(uri)
+    const filename = uri.substring(uri.lastIndexOf('/') + 1);
+    const uploadUri = Platform.OS === 'ios' ? uri.replace('file://', '') : uri;
+
+    const storage = getStorage(app);
+    const fileRef = ref(storage, filename);
+    await fetch(uploadUri)
+      .then(async (img) => {
+        await img.blob()
+          .then(async (bytes) => {
+            let metadata;
+            if (type == 'video') {
+              metadata = {
+                contentType: 'video/mp4',
+              };
+            } else {
+              metadata = {
+                contentType: 'image/jpeg',
+              };
+            }
+            await uploadBytes(fileRef, bytes, metadata).then(async (uploadTask) => {
+              console.log('task', uploadTask)
+              getDownloadURL(uploadTask.ref).then((url) => {
+                if (type == 'video') {
+                  setVideoData(url);
+                } else {
+                  setImageData(url);
+                }
+              });
+            }).catch((err) => {
+              alert('Error while uploading Image!')
+              console.log(err);
+            });
+          })
+          .catch((err) => {
+            console.log(err)
+          })
+
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+  }
+
+  const setImageData = (url) => {
+    const imageMessage = [
+      {
+        _id: uuid.v4(),
+        createdAt: new Date(),
+        image: url,
+        user: {
+          _id: auth?.currentUser?.uid,
+          avatar: auth?.currentUser?.photoURL
+        },
+      },
+    ];
+    setMessages(previousMessages => GiftedChat.append(previousMessages, imageMessage))
+    const { _id, createdAt, user, image } = imageMessage[0]
+    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, image, sent_by: user, replyMessage: null });
+  }
 
   const onSend = useCallback(
     (messages = []) => {

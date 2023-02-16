@@ -14,22 +14,6 @@ const firebaseConfig = {
 };
 
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth();
 export const db = getFirestore();
-// export const signup = () => {
-//     if (email !== '' && password !== '') {
-//         signInAnonymously(auth, email)
-//             .then(() => console.log('Signup success'))
-//             .catch((err) => Alert.alert("Login error", err.message));
-//     }
-// }
-
-// export const sendMessage = (messages) => {
-//     messages.forEach(item => {
-//         const message = {
-//             text: item.text,
-//             timestamp: getFirestore.
-//         }
-//     });
-// }
