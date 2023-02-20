@@ -9,6 +9,7 @@ import { auth, db } from '../../config/firebase';
 import uuid from 'react-native-uuid';
 import { ref, getDownloadURL, uploadBytesResumable, getStorage } from "firebase/storage";
 import Video from 'react-native-video';
+import ActionSheet from "./components/ActionSheet/ActionSheet"
 const ChatScreen = ({ route, navigation }) => {
   const [replyMessage, setReplyMessage] = useState(null);
   //using ref for swiping a message because user can only 
@@ -17,9 +18,58 @@ const ChatScreen = ({ route, navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   var conversation = route.params.conversation.conversation;
   const [messages, setMessages] = useState([])
+  const clearReplyMessage = () => setReplyMessage(null);
+  const [openAttachmentModal, setOpenAttachmentModal] = useState(false);
 
-  const clearReplyMessage = () => setReplyMessage(null)
-
+  const attachmentOptions = [
+    {
+      id: 1,
+      label: 'Camera',
+      onPress: () => {
+        launchCamera().then((res) => {
+          setOpenAttachmentModal(false)
+          if (!res.didCancel && !res.errorCode) {
+            uploadMediaToFirestore(res, 'image');
+          }
+        });
+      }
+    },
+    {
+      id: 2,
+      label: 'Image',
+      onPress: () => {
+        // setOpenAttachmentModal(false)
+        launchImageLibrary().then((res) => {
+          setOpenAttachmentModal(false)
+          if (!res.didCancel && !res.errorCode) {
+            uploadMediaToFirestore(res, 'image');
+          }
+        });
+      }
+    },
+    {
+      id: 3,
+      label: 'Video',
+      onPress: () => {
+        const options = {
+          title: 'Video Picker',
+          mediaType: 'video',
+        };
+        launchImageLibrary(options).then((res) => {
+          setOpenAttachmentModal(false)
+          if (!res.didCancel && !res.errorCode) {
+            uploadMediaToFirestore(res, 'video');
+          }
+        });
+      }
+    },
+    {
+      id: 4,
+      label: 'Document',
+      onPress: () => {
+      }
+    },
+  ];
   useLayoutEffect(() => {
     setIsLoading(true)
     navigation.setOptions({
@@ -52,35 +102,36 @@ const ChatScreen = ({ route, navigation }) => {
 
 
   const gotoMedia = () => {
-    ActionSheetIOS.showActionSheetWithOptions({
-      options: ["Cancel", "Camera", "Photos", "Video"],
-      cancelButtonIndex: 0
-    },
-      buttonIndex => {
-        if (buttonIndex == 2) {
-          launchImageLibrary().then((res) => {
-            if (!res.didCancel && !res.errorCode) {
-              uploadMediaToFirestore(res, 'image');
-            }
-          });
-        } else if (buttonIndex == 1) {
-          launchCamera().then((res) => {
-            if (!res.didCancel && !res.errorCode) {
-              uploadMediaToFirestore(res, 'image');
-            }
-          });
-        } else if (buttonIndex == 3) {
-          const options = {
-            title: 'Video Picker',
-            mediaType: 'video',
-          };
-          launchImageLibrary(options).then((res) => {
-            if (!res.didCancel && !res.errorCode) {
-              uploadMediaToFirestore(res, 'video');
-            }
-          });
-        }
-      })
+    setOpenAttachmentModal(true)
+    // ActionSheetIOS.showActionSheetWithOptions({
+    //   options: ["Cancel", "Camera", "Photos", "Video"],
+    //   cancelButtonIndex: 0
+    // },
+    //   buttonIndex => {
+    //     if (buttonIndex == 2) {
+    //       launchImageLibrary().then((res) => {
+    //         if (!res.didCancel && !res.errorCode) {
+    //           uploadMediaToFirestore(res, 'image');
+    //         }
+    //       });
+    //     } else if (buttonIndex == 1) {
+    //       launchCamera().then((res) => {
+    //         if (!res.didCancel && !res.errorCode) {
+    //           uploadMediaToFirestore(res, 'image');
+    //         }
+    //       });
+    //     } else if (buttonIndex == 3) {
+    //       const options = {
+    //         title: 'Video Picker',
+    //         mediaType: 'video',
+    //       };
+    //       launchImageLibrary(options).then((res) => {
+    //         if (!res.didCancel && !res.errorCode) {
+    //           uploadMediaToFirestore(res, 'video');
+    //         }
+    //       });
+    //     }
+    //   })
   }
 
   async function uploadMediaToFirestore(res, type) {
@@ -311,6 +362,7 @@ const ChatScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
+      <ActionSheet actionItems={attachmentOptions} open={openAttachmentModal} setOpen={setOpenAttachmentModal} />
       <GiftedChat
         messages={messages}
         onSend={messages => onSend(messages)}
