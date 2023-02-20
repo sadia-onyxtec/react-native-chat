@@ -9,7 +9,15 @@ import { auth, db } from '../../config/firebase';
 import uuid from 'react-native-uuid';
 import { ref, getDownloadURL, uploadBytesResumable, getStorage } from "firebase/storage";
 import Video from 'react-native-video';
-import ActionSheet from "./components/ActionSheet/ActionSheet"
+import ActionSheet from "./components/ActionSheet/ActionSheet";
+
+import DocumentPicker, {
+  DirectoryPickerResponse,
+  DocumentPickerResponse,
+  isInProgress,
+  types,
+} from 'react-native-document-picker'
+import FileViewer from "react-native-file-viewer";
 const ChatScreen = ({ route, navigation }) => {
   const [replyMessage, setReplyMessage] = useState(null);
   //using ref for swiping a message because user can only 
@@ -67,6 +75,12 @@ const ChatScreen = ({ route, navigation }) => {
       id: 4,
       label: 'Document',
       onPress: () => {
+        DocumentPicker.pickSingle({
+          presentationStyle: 'fullScreen',
+          copyTo: 'cachesDirectory',
+        })
+          .then((res) => uploadMediaToFirestore(res, 'doc'))
+          .catch((err) => console.log(err))
       }
     },
   ];
@@ -90,7 +104,8 @@ const ChatScreen = ({ route, navigation }) => {
         text: doc.data().message_text,
         replyMessage: doc.data().replyMessage ? doc.data().replyMessage : null,
         image: doc.data().image,
-        video: doc.data().video
+        video: doc.data().video,
+        file: doc.data().file,
       }))
     ));
     setIsLoading(false);
@@ -135,8 +150,8 @@ const ChatScreen = ({ route, navigation }) => {
   }
 
   async function uploadMediaToFirestore(res, type) {
-    const uri = res.assets[0].uri;
-    const filename = res.assets[0].fileName;
+    const uri = type === 'doc' ? res.uri : res.assets[0].uri;
+    const filename = type === 'doc' ? res.name : res.assets[0].fileName;
     const uploadUri = Platform.OS === 'ios' ? uri.replace('file://', '') : uri;
     const storageRef = ref(getStorage(), filename);
 
@@ -182,8 +197,11 @@ const ChatScreen = ({ route, navigation }) => {
           console.log('File available at', downloadURL);
           if (type == 'video') {
             setVideoData(downloadURL);
-          } else {
+          } else if (type == 'image') {
             setImageData(downloadURL);
+          }
+          else if (type == "doc") {
+            setFileData(downloadURL, filename, filename.split('.').pop(), uri);
           }
         });
       });
@@ -222,6 +240,25 @@ const ChatScreen = ({ route, navigation }) => {
     const { _id, createdAt, user, video } = imageMessage[0]
     setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, video, sent_by: user, replyMessage: null });
   }
+
+
+  const setFileData = (url, filename, type, local_uri) => {
+    const imageMessage = [
+      {
+        _id: uuid.v4(),
+        createdAt: new Date(),
+        file: { url, filename, type, local_uri },
+        user: {
+          _id: auth?.currentUser?.uid,
+          avatar: auth?.currentUser?.photoURL
+        },
+      },
+    ];
+    setMessages(previousMessages => GiftedChat.append(previousMessages, imageMessage))
+    const { _id, createdAt, user, file } = imageMessage[0]
+    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, file, sent_by: user, replyMessage: null });
+  }
+
 
   const renderMessageVideo = (props) => {
     const { currentMessage } = props;
@@ -321,16 +358,24 @@ const ChatScreen = ({ route, navigation }) => {
     }
   }, [replyMessage])
 
-  const renderReplyMessageView = (props) =>
-    //Bubble design if reply message exists
-    props.currentMessage &&
-    props.currentMessage.replyMessage && (
-      <View style={styles.replyOuterContainer}>
-        <View style={styles.replyMessageContainer}>
-          <Text style={styles.replyText}>{props.currentMessage.replyMessage.text}</Text>
-        </View>
-      </View>
+  const openDocument = (file) => {
+    FileViewer.open(file.local_uri).catch((err) => { alert("Could not open the file!") })
+  }
+  const renderReplyMessageView = (props) => {
+    return (
+      //Bubble design if reply message exists
+      props.currentMessage.file === undefined ? (props.currentMessage &&
+        props.currentMessage.replyMessage && (
+          <View style={styles.replyOuterContainer}>
+            <View style={styles.replyMessageContainer}>
+              <Text style={styles.replyText}>{props.currentMessage.replyMessage.text}</Text>
+            </View>
+          </View>)) :
+        <TouchableOpacity style={{ marginHorizontal: 16, marginVertical: 16 }} onPress={() => openDocument(props.currentMessage.file)}>
+          <Text style={{ color: "#F8F4EA" }}>{props.currentMessage?.file?.filename}</Text>
+        </TouchableOpacity>
     )
+  }
 
   const renderBubble = (props) =>
     <Bubble
@@ -359,6 +404,7 @@ const ChatScreen = ({ route, navigation }) => {
       }}
       {...props}
     />
+
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
