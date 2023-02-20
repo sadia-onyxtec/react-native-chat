@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react"
-import { StyleSheet, View, Text, ActivityIndicator, SafeAreaView, ActionSheetIOS, TouchableOpacity } from "react-native"
-import { GiftedChat, InputToolbar, Bubble } from "react-native-gifted-chat"
+import { StyleSheet, View, Text, ActivityIndicator, SafeAreaView, ActionSheetIOS, TouchableOpacity, Dimensions } from "react-native"
+import { GiftedChat, InputToolbar, Bubble, MessageImage } from "react-native-gifted-chat"
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker'
 import ChatMessageBox from "./components/ChatMessageBox"
 import ReplyMessageBar from "./components/ReplyMessageBar"
@@ -8,6 +8,7 @@ import { collection, orderBy, query, onSnapshot, doc, setDoc } from 'firebase/fi
 import { auth, db } from '../../config/firebase';
 import uuid from 'react-native-uuid';
 import { ref, getDownloadURL, uploadBytesResumable, getStorage } from "firebase/storage";
+import Video from 'react-native-video';
 const ChatScreen = ({ route, navigation }) => {
   const [replyMessage, setReplyMessage] = useState(null);
   //using ref for swiping a message because user can only 
@@ -39,7 +40,7 @@ const ChatScreen = ({ route, navigation }) => {
         text: doc.data().message_text,
         replyMessage: doc.data().replyMessage ? doc.data().replyMessage : null,
         image: doc.data().image,
-        // video: doc.data().video
+        video: doc.data().video
       }))
     ));
     setIsLoading(false);
@@ -65,7 +66,7 @@ const ChatScreen = ({ route, navigation }) => {
         } else if (buttonIndex == 1) {
           launchCamera().then((res) => {
             if (!res.didCancel && !res.errorCode) {
-              //uploadMediaToFirestore(res, 'image');
+              uploadMediaToFirestore(res, 'image');
             }
           });
         } else if (buttonIndex == 3) {
@@ -75,7 +76,7 @@ const ChatScreen = ({ route, navigation }) => {
           };
           launchImageLibrary(options).then((res) => {
             if (!res.didCancel && !res.errorCode) {
-              //uploadMediaToFirestore(res, 'video');
+              uploadMediaToFirestore(res, 'video');
             }
           });
         }
@@ -153,6 +154,53 @@ const ChatScreen = ({ route, navigation }) => {
     const { _id, createdAt, user, image } = imageMessage[0]
     setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, image, sent_by: user, replyMessage: null });
   }
+
+  const setVideoData = (url) => {
+    const imageMessage = [
+      {
+        _id: uuid.v4(),
+        createdAt: new Date(),
+        video: url,
+        user: {
+          _id: auth?.currentUser?.uid,
+          avatar: auth?.currentUser?.photoURL
+        },
+      },
+    ];
+    setMessages(previousMessages => GiftedChat.append(previousMessages, imageMessage))
+    const { _id, createdAt, user, video } = imageMessage[0]
+    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, video, sent_by: user, replyMessage: null });
+  }
+
+  const renderMessageVideo = (props) => {
+    const { currentMessage } = props;
+    console.log(currentMessage.video);
+    return (
+
+      <View style={{ position: 'relative', height: 150, width: 250 }}>
+
+        <Video
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            height: 150,
+            width: 250,
+            borderRadius: 20,
+          }}
+          shouldPlay
+
+          rate={1.0}
+          resizeMode="cover"
+          height={150}
+          width={250}
+          muted={false}
+          source={{ uri: "https://firebasestorage.googleapis.com/v0/b/coupon-2379f.appspot.com/o/small.mp4?alt=media&token=4f4722e3-c9fc-49a8-a753-1d635e99eb43" }}
+          allowsExternalPlayback={false}></Video>
+
+      </View>
+    );
+  };
 
   const onSend = useCallback(
     (messages = []) => {
@@ -251,6 +299,15 @@ const ChatScreen = ({ route, navigation }) => {
       }}
     />
 
+  const renderMessageImage = (props) =>
+    <MessageImage
+      imageStyle={{
+        width: 200,
+        height: 180,
+        resizeMode: 'cover'
+      }}
+      {...props}
+    />
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -269,6 +326,8 @@ const ChatScreen = ({ route, navigation }) => {
         renderMessage={renderMessageBox}
         renderCustomView={renderReplyMessageView}
         renderBubble={renderBubble}
+        renderMessageImage={renderMessageImage}
+        renderMessageVideo={renderMessageVideo}
       />
     </SafeAreaView>
   )
