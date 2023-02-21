@@ -1,6 +1,7 @@
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
-
+pod 'react-native-video', :path => '../node_modules/react-native-video/react-native-video.podspec'
+pod 'RNFileViewer', :path => '../node_modules/react-native-file-viewer'
 platform :ios, '12.4'
 install! 'cocoapods', :deterministic_uuids => false
 
