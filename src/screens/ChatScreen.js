@@ -79,7 +79,10 @@ const ChatScreen = ({ route, navigation }) => {
           presentationStyle: 'fullScreen',
           copyTo: 'cachesDirectory',
         })
-          .then((res) => uploadMediaToFirestore(res, 'doc'))
+          .then((res) => {
+            setOpenAttachmentModal(false);
+            uploadMediaToFirestore(res, 'doc')
+          })
           .catch((err) => console.log(err))
       }
     },
@@ -106,6 +109,7 @@ const ChatScreen = ({ route, navigation }) => {
         image: doc.data().image,
         video: doc.data().video,
         file: doc.data().file,
+        attachmentDetails: doc.data().attachmentDetails
       }))
     ));
     setIsLoading(false);
@@ -196,9 +200,9 @@ const ChatScreen = ({ route, navigation }) => {
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
           console.log('File available at', downloadURL);
           if (type == 'video') {
-            setVideoData(downloadURL);
+            setVideoData(downloadURL, filename, filename.split('.').pop(), uri);
           } else if (type == 'image') {
-            setImageData(downloadURL);
+            setImageData(downloadURL, filename, filename.split('.').pop(), uri);
           }
           else if (type == "doc") {
             setFileData(downloadURL, filename, filename.split('.').pop(), uri);
@@ -207,7 +211,7 @@ const ChatScreen = ({ route, navigation }) => {
       });
   }
 
-  const setImageData = (url) => {
+  const setImageData = (url, filename, type, local_uri) => {
     const imageMessage = [
       {
         _id: uuid.v4(),
@@ -217,15 +221,16 @@ const ChatScreen = ({ route, navigation }) => {
           _id: auth?.currentUser?.uid,
           avatar: auth?.currentUser?.photoURL
         },
+        attachmentDetails: { filename, type, local_uri }
       },
     ];
     setMessages(previousMessages => GiftedChat.append(previousMessages, imageMessage))
-    const { _id, createdAt, user, image } = imageMessage[0]
-    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, image, sent_by: user, replyMessage: null });
+    const { _id, createdAt, user, image, attachmentDetails } = imageMessage[0]
+    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, image, sent_by: user, replyMessage: null, attachmentDetails });
   }
 
-  const setVideoData = (url) => {
-    const imageMessage = [
+  const setVideoData = (url, filename, type, local_uri) => {
+    const videoMessage = [
       {
         _id: uuid.v4(),
         createdAt: new Date(),
@@ -234,35 +239,36 @@ const ChatScreen = ({ route, navigation }) => {
           _id: auth?.currentUser?.uid,
           avatar: auth?.currentUser?.photoURL
         },
+        attachmentDetails: { filename, type, local_uri }
       },
     ];
-    setMessages(previousMessages => GiftedChat.append(previousMessages, imageMessage))
-    const { _id, createdAt, user, video } = imageMessage[0]
-    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, video, sent_by: user, replyMessage: null });
+    setMessages(previousMessages => GiftedChat.append(previousMessages, videoMessage))
+    const { _id, createdAt, user, video, attachmentDetails } = videoMessage[0]
+    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, video, sent_by: user, replyMessage: null, attachmentDetails });
   }
 
 
   const setFileData = (url, filename, type, local_uri) => {
-    const imageMessage = [
+    const fileMessage = [
       {
         _id: uuid.v4(),
         createdAt: new Date(),
-        file: { url, filename, type, local_uri },
+        file: url,
         user: {
           _id: auth?.currentUser?.uid,
           avatar: auth?.currentUser?.photoURL
         },
+        attachmentDetails: { filename, type, local_uri }
       },
     ];
-    setMessages(previousMessages => GiftedChat.append(previousMessages, imageMessage))
-    const { _id, createdAt, user, file } = imageMessage[0]
-    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, file, sent_by: user, replyMessage: null });
+    setMessages(previousMessages => GiftedChat.append(previousMessages, fileMessage))
+    const { _id, createdAt, user, file, attachmentDetails } = fileMessage[0]
+    setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, file, sent_by: user, replyMessage: null, attachmentDetails });
   }
 
 
   const renderMessageVideo = (props) => {
     const { currentMessage } = props;
-    console.log(currentMessage.video);
     return (
 
       <View style={{ position: 'relative', height: 150, width: 250 }}>
@@ -277,7 +283,6 @@ const ChatScreen = ({ route, navigation }) => {
             borderRadius: 20,
           }}
           shouldPlay
-
           rate={1.0}
           resizeMode="cover"
           height={150}
@@ -295,15 +300,19 @@ const ChatScreen = ({ route, navigation }) => {
       //setting replyMessage to the parent of the message text 
       if (replyMessage) {
         messages[0].replyMessage = {
-          text: replyMessage.text,
-          replyTo: replyMessage._id
+          text: replyMessage.text !== undefined ? replyMessage.text : null,
+          replyTo: replyMessage._id,
+          image: replyMessage.image !== undefined ? replyMessage.image : null,
+          video: replyMessage.video !== undefined ? replyMessage.video : null,
+          file: replyMessage.file !== undefined ? replyMessage.file : null,
+          attachmentDetails: replyMessage.attachmentDetails !== undefined ? replyMessage.attachmentDetails : null
         }
       }
       setMessages(previousMessages =>
         GiftedChat.append(previousMessages, messages)
       );
       const { _id, createdAt, user } = messages[0];
-      setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, message_text: messages[0].text, sent_by: user, replyMessage: messages[0].replyMessage ? messages[0].replyMessage : null });
+      setDoc(doc(db, 'message', conversation.id, "messages", _id), { id: _id, sent_at: createdAt, message_text: messages[0].text, sent_by: user, replyMessage: messages[0].replyMessage !== undefined ? messages[0].replyMessage : null });
       setReplyMessage(null)
     },
     [replyMessage]
@@ -366,13 +375,23 @@ const ChatScreen = ({ route, navigation }) => {
       //Bubble design if reply message exists
       props.currentMessage.file === undefined ? (props.currentMessage &&
         props.currentMessage.replyMessage && (
-          <View style={styles.replyOuterContainer}>
+          <View View style={styles.replyOuterContainer} >
             <View style={styles.replyMessageContainer}>
-              <Text style={styles.replyText}>{props.currentMessage.replyMessage.text}</Text>
+              {props.currentMessage.replyMessage.text !== null &&
+                <Text style={styles.replyText}>{props.currentMessage.replyMessage.text}</Text>}
+              {props.currentMessage.replyMessage.attachmentDetails !== null && <>
+                {/* {props.currentMessage.replyMessage.image !== null &&
+                  <Text style={styles.replyText}>image</Text>}
+                {props.currentMessage.replyMessage.video !== null &&
+                  <Text style={styles.replyText}>video</Text>}
+                {props.currentMessage.replyMessage.file !== null && */}
+                <Text style={styles.replyText}>{props.currentMessage.replyMessage.attachmentDetails.filename}</Text>
+              </>}
+              {/* <Text style={styles.replyText}>{props.currentMessage.replyMessage.text !== null ? props.currentMessage.replyMessage.text : (props.currentMessage.image !== null ? "props.currentMessage.image" : ("sdfsd"))}</Text> */}
             </View>
-          </View>)) :
-        <TouchableOpacity style={{ marginHorizontal: 16, marginVertical: 16 }} onPress={() => openDocument(props.currentMessage.file)}>
-          <Text style={{ color: "#F8F4EA" }}>{props.currentMessage?.file?.filename}</Text>
+          </View >)) :
+        <TouchableOpacity style={{ marginHorizontal: 16, marginVertical: 16 }} onPress={() => openDocument(props.currentMessage.attachmentDetails)}>
+          <Text style={{ color: "#F8F4EA" }}>{props.currentMessage?.attachmentDetails?.filename}</Text>
         </TouchableOpacity>
     )
   }

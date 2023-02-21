@@ -14,7 +14,9 @@ const ReplyMessageBar = ({ clearReply, message }) => {
       </View>
 
       <View style={styles.messageContainer}>
-        <Text>{message.text}</Text>
+        {message.text === null || message.text === undefined ?
+          <Text>{message?.attachmentDetails?.filename}</Text>
+          : <Text>{message.text}</Text>}
       </View>
 
       <TouchableOpacity style={styles.crossButton} onPress={clearReply}>
@@ -59,6 +61,7 @@ const styles = StyleSheet.create({
     padding: 4
   },
   messageContainer: {
-    flex: 1
+    flex: 1,
+    overflow: "scroll"
   }
 })
