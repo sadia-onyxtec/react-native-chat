@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "877788395377",
+    "project_id": "chat-app-c4d77",
+    "storage_bucket": "chat-app-c4d77.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:877788395377:android:ae6b663195825989d528d0",
+        "android_client_info": {
+          "package_name": "com.react_native_chat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "877788395377-mjkqbioqtver521615l1fgusltqg3cd7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.react_native_chat",
+            "certificate_hash": "893418f18fed1b9124b5aac5e3b9b7912dc6333b"
+          }
+        },
+        {
+          "client_id": "877788395377-bocinlmu46ajr8skpiq40hti7kcflg0r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe0CSdzugJ75Af81zDLgjnEaUDFem2lM8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "877788395377-bocinlmu46ajr8skpiq40hti7kcflg0r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "877788395377-d4ega334q9pius9834kdiefokcs0o22g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.react-native-chat"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
