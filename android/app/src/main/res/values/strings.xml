@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">react_native_chat</string>
+    <string name="channelID">fcm_fallback_notification_channel</string>
 </resources>
